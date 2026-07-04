@@ -1,0 +1,142 @@
+/* TACT component recipes — depends on tokens.css. */
+
+/* ---- aurora background ---- */
+.tact-aurora { position: relative; overflow-x: clip; min-height: 100vh; }
+.tact-aurora::before, .tact-aurora::after {
+  content: ''; position: absolute; width: 640px; height: 640px;
+  border-radius: 50%; filter: blur(95px); pointer-events: none; z-index: 0;
+  background: rgba(31, 58, 95, 0.20);
+}
+.tact-aurora::before { top: -240px; right: -200px; }
+.tact-aurora::after  { bottom: -240px; left: -200px; }
+.tact-aurora > * { position: relative; z-index: 1; }
+
+/* ---- sticky light header + floating-pill nav ---- */
+.tact-bar {
+  position: sticky; top: 0; z-index: 100;
+  height: var(--header-height);
+  display: flex; align-items: center; gap: 22px;
+  background: var(--color-bg-white);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 8px rgba(28, 27, 25, 0.04);
+  padding: 0 24px;
+}
+.tact-nav {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: 999px; padding: 5px;
+  box-shadow: 0 6px 18px rgba(31, 58, 95, 0.08);
+}
+.tact-nav a, .tact-nav button {
+  padding: 8px 16px; border-radius: 999px;
+  font: inherit; font-size: .875rem; font-weight: 500;
+  color: var(--color-text-light);
+  background: transparent; border: none; cursor: pointer;
+  transition: background .18s, color .18s, transform .18s;
+}
+.tact-nav a:not(.active):hover, .tact-nav button:not(.active):hover {
+  background: rgba(31, 58, 95, 0.14); color: var(--color-primary);
+  font-weight: 600; transform: translateY(-1px);
+}
+.tact-nav a.active, .tact-nav button.active {
+  background: var(--color-primary); color: var(--color-text-white);
+  font-weight: 600;
+}
+
+/* ---- "body-in-tone" card ---- */
+.tone-steel { --t-bg:#EAEFF4; --t-bd:#D5DFEA; --t-soft:#F5F8FB; }
+.tone-green { --t-bg:#E8F0EA; --t-bd:#CFE2D4; --t-soft:#F4F8F5; }
+.tone-blue  { --t-bg:#E6EEFE; --t-bd:#C9D8FB; --t-soft:#F2F6FE; }
+.tone-rust  { --t-bg:#FBE7E1; --t-bd:#F2CFC3; --t-soft:#FDF5F1; }
+.tact-card {
+  background: var(--t-soft, var(--color-bg-white));
+  border: 1px solid var(--t-bd, var(--color-border));
+  border-radius: 18px; overflow: hidden;
+  box-shadow: 0 8px 22px rgba(28, 27, 25, 0.09);
+  transition: transform .24s, box-shadow .24s, border-color .24s;
+}
+.tact-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 24px 48px rgba(28, 27, 25, 0.16);
+}
+.tact-card-cap {
+  background: var(--t-bg, var(--color-bg)); border-bottom: 1px solid var(--t-bd, var(--color-border));
+  padding: 18px 20px; display: flex; align-items: center;
+  justify-content: space-between;
+}
+.tact-card:hover .tact-card-cap { background: var(--t-bd); }
+.tact-card-ico {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--color-ink); color: #8FC9A6;
+  display: flex; align-items: center; justify-content: center;
+}
+.tact-card-body { padding: 18px 20px 20px; }
+
+/* ---- KPI card ---- */
+.tact-kpi {
+  background: var(--color-bg-white); border: 1px solid var(--color-border);
+  border-radius: 18px; padding: 22px 20px;
+  transition: transform .24s, box-shadow .24s, border-color .24s;
+}
+.tact-kpi:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 26px 48px rgba(28, 27, 25, 0.13);
+  border-color: var(--color-primary-soft);
+}
+.tact-kpi-label { font-size: .85rem; font-weight: 600; color: var(--color-accent); letter-spacing: 0.01em; }
+.tact-kpi-val {
+  font-family: var(--font-family-en); font-size: 2.1rem; font-weight: 700;
+  color: var(--color-primary); margin: 8px 0 4px;
+  line-height: 1.1;
+}
+.tact-kpi-sub { font-size: .82rem; color: var(--color-text-light); }
+
+.tact-delta { font-size: .8rem; font-weight: 600; }
+.tact-delta-up { color: var(--color-pos); }
+.tact-delta-down { color: var(--color-accent); }
+
+/* ---- badges ---- */
+.tact-badge { font-size: .72rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
+.tact-badge-on   { background: var(--color-primary-soft); color: var(--color-primary); }
+.tact-badge-new  { background: rgba(214, 74, 46, 0.12); color: var(--color-accent); }
+.tact-badge-soon { background: var(--color-bg); color: var(--color-text-light);
+  border: 1px solid var(--color-border); }
+.tact-badge-pos  { background: var(--color-pos-soft); color: var(--color-pos); }
+
+/* ---- buttons ---- */
+.tact-btn {
+  font: inherit; font-size: .95rem; font-weight: 600;
+  padding: 10px 22px; border-radius: 12px; cursor: pointer;
+  border: 1px solid transparent; transition: all .18s;
+}
+.tact-btn-primary {
+  background: var(--color-primary); color: var(--color-text-white);
+  box-shadow: 0 4px 16px rgba(31, 58, 95, 0.22);
+}
+.tact-btn-primary:hover { filter: brightness(1.08); transform: translateY(-2px); }
+.tact-btn-ghost {
+  background: transparent; color: var(--color-text);
+  border-color: var(--color-border);
+}
+.tact-btn-ghost:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ---- footer ---- */
+.tact-footer {
+  background: var(--color-ink); color: rgba(244, 241, 234, 0.6);
+  padding: 26px 24px; display: flex; align-items: center; gap: 18px;
+}
+
+/* ---- mini status bar (defects breakdown) ---- */
+.tact-statbar {
+  display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--color-border);
+}
+.tact-statbar > span { display: block; height: 100%; }
+.tact-statbar .seg-pending { background: var(--color-accent); }
+.tact-statbar .seg-todo { background: var(--color-primary); }
+.tact-statbar .seg-nego  { background: #C99238; }
+.tact-statbar .seg-done  { background: var(--color-pos); }
+
+.tact-stat-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; color: var(--color-text-light); }
+.tact-stat-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 5px; vertical-align: middle; }

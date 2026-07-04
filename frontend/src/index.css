@@ -1,0 +1,92 @@
+/* TACT design system tokens + recipes, shared across all TACT apps. */
+@import './styles/tokens.css';
+@import './styles/recipes.css';
+@import './styles/TactLogo.css';
+
+* { box-sizing: border-box; }
+
+html { direction: rtl; }
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+/* App shell layout */
+.app-shell { min-height: 100vh; }
+
+/* Full-bleed editor route: lock to the viewport as a flex column so the
+   canvas always fills exactly the space under the header — no page scroll,
+   no fragile calc(100vh - header), robust against zoom / stale tabs. */
+.app-shell--editor {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-shell--editor .tact-bar { flex: 0 0 auto; }
+.app-shell--editor .fc-wrapper,
+.app-shell--editor .bt-wrap {
+  flex: 1 1 auto;
+  height: auto;      /* override calc() — fill the remaining flex space */
+  min-height: 0;
+}
+.app-shell--editor .bfe-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;  /* the script list can still scroll if it grows long */
+}
+
+.brand { text-decoration: none; display: inline-flex; align-items: center; }
+.tact-bar .tact-nav { margin-inline-start: auto; }
+
+.app-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+/* Hub (home) cards grid */
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+.hub-card {
+  display: block;
+  text-decoration: none;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 26px 24px;
+  box-shadow: 0 8px 22px var(--color-card-shadow);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.hub-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px var(--color-card-hover-shadow);
+}
+.hub-card-ico { font-size: 2rem; }
+.hub-card-title {
+  font-family: var(--font-family-en);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 12px 0 6px;
+}
+.hub-card-desc { color: var(--color-text-light); font-size: .95rem; line-height: 1.5; }
+
+.app-hero h1 {
+  font-family: var(--font-family-en);
+  color: var(--color-primary);
+  font-size: 2rem;
+  margin: 0 0 6px;
+}
+.app-hero p { color: var(--color-text-light); margin: 0; }
