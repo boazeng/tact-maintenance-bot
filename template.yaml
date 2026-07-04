@@ -136,6 +136,9 @@ Resources:
           TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
           TELEGRAM_WEBHOOK_SECRET: !Ref TelegramWebhookSecret
           TELEGRAM_SCRIPT_ID: flow_1772177781916
+          # M1000 hands off to this script for BOTH channels (default is the demo
+          # "maintenance-troubleshoot"). Pin it to the main maintenance bot.
+          ROUTING_SCRIPT_ID: flow_1772177781916
           WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
           WHATSAPP_ACCESS_TOKEN: !Ref WhatsAppAccessToken
           WHATSAPP_VERIFY_TOKEN: !Ref WhatsAppVerifyToken
