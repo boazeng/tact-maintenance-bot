@@ -113,3 +113,13 @@ def append_note_to_service_call(docno, note):
     """Pretend to append a note to an existing service call."""
     _notes.append({"DOCNO": docno, "note": note})
     logger.info("[mock] append_note_to_service_call(%s) (+%d chars)", docno, len(note or ""))
+
+
+def create_message(data):
+    """Pretend to store a customer 'leave a message'; return a fake id."""
+    global _docno_seq
+    _docno_seq += 1
+    mid = f"MSG-{_docno_seq:04d}"
+    _created.append({"DOCNO": mid, "target": "message", "data": dict(data)})
+    logger.info("[mock] create_message -> id=%s", mid)
+    return {"DOCNO": mid}

@@ -199,3 +199,49 @@ def create_service_call(data):
     _created.append({"DOCNO": call_number, "id": result.get("id"), "target": "service-call"})
     logger.info(f"[servicecall] opened call {call_number} (id={result.get('id')})")
     return {"DOCNO": call_number, **result}
+
+
+def create_message(data):
+    """Send a customer 'leave a message' to the app's SEPARATE messages store
+    (POST {URL}/api/v1/messages) — NOT a service call. Returns {'DOCNO': id, ...}.
+
+    Contract mirrors §6 of the integration HANDOFF. Fields are optional except
+    `body`; the app dedups on `external_id`.
+    """
+    key = _api_key()
+    if not key:
+        raise RuntimeError("SERVICE_CALL_API_KEY חסר — צור מפתח בוט באפליקציית service-call")
+
+    if _dry_write:
+        global _dry_seq
+        _dry_seq += 1
+        mid = f"MSG-DRY-{_dry_seq:04d}"
+        _created.append({"DOCNO": mid, "dry": True, "target": "service-call-message"})
+        logger.info(f"[servicecall] DRY-RUN — message NOT sent (would POST): {mid}")
+        return {"DOCNO": mid, "dry_run": True}
+
+    body = (data.get("body") or data.get("description")
+            or data.get("fault_text") or data.get("summary") or "")
+    payload = {
+        "body": body,
+        "sender_name": data.get("cdes") or data.get("name") or None,
+        "phone": data.get("phone") or None,
+        "customer_code": data.get("custname") or None,
+        "channel": data.get("channel") or None,
+        "external_id": data.get("message_id") or None,
+        "extra": {
+            "origin": "takt-bots",
+            "customer_type": data.get("customer_type", ""),
+        },
+    }
+    resp = requests.post(f"{_base_url()}/api/v1/messages", json=payload,
+                         headers=_headers(write=True), timeout=20)
+    if resp.status_code >= 400:
+        logger.error(f"[servicecall] message ingest {resp.status_code}: {resp.text[:300]}")
+        raise RuntimeError(f"Service-Call message API error {resp.status_code}: {resp.text[:200]}")
+
+    result = resp.json()
+    msg_id = str(result.get("id", ""))
+    _created.append({"DOCNO": msg_id, "id": result.get("id"), "target": "service-call-message"})
+    logger.info(f"[servicecall] message stored (id={msg_id})")
+    return {"DOCNO": msg_id, **result}

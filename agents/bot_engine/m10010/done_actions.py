@@ -122,7 +122,8 @@ def _handle_done(done_id, script, session):
 
 
 def _save_customer_message(session, script=None):
-    """Save a non-fault customer message as a service-call record."""
+    """Store a non-fault customer 'leave a message' — locally + in the app's
+    SEPARATE messages store (NOT a service call). See HANDOFF §6."""
     maint_db = _get_maint_db()
     phone = session.get("phone", "")
     name = session.get("customer_name", "") or session.get("name", "")
@@ -153,17 +154,22 @@ def _save_customer_message(session, script=None):
     result = maint_db.save_service_call(**call_data)
     call_id = result.get("id", "")
 
-    # Auto-push to an external system (optional, disabled by default)
+    # Route to the app's SEPARATE messages store (NOT a service call).
     writer = _get_service_call_writer()
-    if writer is not None:
+    if writer is not None and hasattr(writer, "create_message"):
         try:
-            call_data["fault_text"] = f"הודעה מלקוח:\n{message}\nטלפון: {phone}\nשם: {name}"
-            priority_result = writer.create_service_call(call_data)
-            priority_callno = str(priority_result.get("DOCNO", ""))
-            maint_db.mark_service_call_pushed(call_id, callno=priority_callno)
-            logger.info(f"[M10010] Message auto-pushed to external: DOCNO={priority_callno}")
+            call_data["body"] = message
+            call_data["channel"] = session.get("channel", "")
+            msg_result = writer.create_message(call_data)
+            ext_id = str(msg_result.get("DOCNO", ""))
+            maint_db.mark_service_call_pushed(call_id, callno=ext_id)
+            logger.info(f"[M10010] Customer message stored in Service-Call: id={ext_id}")
         except Exception as e:
-            logger.error(f"[M10010] Message auto-push to external failed: {e}")
+            logger.error(f"[M10010] Message push to Service-Call failed: {e}")
+    elif writer is not None:
+        logger.info("[M10010] writer has no create_message; message saved locally only")
+
+    return call_id
 
 
 def _save_completed_service_call(session, script=None):
