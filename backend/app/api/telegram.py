@@ -103,7 +103,9 @@ def _route_message(msg):
             device_number=response.get("device_number", ""),
             customer_number=response.get("customer_number", ""),
             customer_name=response.get("customer_name", ""),
-            script_id=response.get("script_id") or SCRIPT_ID,
+            # Pin Telegram to the MAIN maintenance bot, ignoring M1000's default
+            # ROUTING_SCRIPT_ID (= the demo "maintenance-troubleshoot" script).
+            script_id=SCRIPT_ID,
         )
         if result:
             _send_response(chat_id, result)
