@@ -17,3 +17,8 @@ data/*.db-journal
 .DS_Store
 Thumbs.db
 .vscode/
+
+# AWS deploy artifacts
+build/
+.aws-sam/
+packaged.yaml

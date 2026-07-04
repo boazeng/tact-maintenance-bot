@@ -1,0 +1,87 @@
+name: Deploy to AWS
+
+# Auto-deploy on every push to main: build+deploy the SAM stack (Lambda + DynamoDB)
+# and publish the frontend to S3/CloudFront. Secrets live in the repo's Actions
+# secrets (Settings → Secrets and variables → Actions), never in the code.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch: {}      # allow manual runs from the Actions tab
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+# OIDC: GitHub gets short-lived AWS credentials by assuming an IAM role —
+# no long-lived AWS keys are stored in the repo. id-token: write is required.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  STACK_NAME: takt-bots
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::824980746386:role/takt-bots-github-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Backend: build Lambda package + deploy the stack ──
+      - name: Build & deploy backend (SAM)
+        env:
+          PRIORITY_URL_DEMO: ${{ secrets.PRIORITY_URL_DEMO }}
+          PRIORITY_URL_REAL: ${{ secrets.PRIORITY_URL_REAL }}
+          PRIORITY_USERNAME: ${{ secrets.PRIORITY_USERNAME }}
+          PRIORITY_PASSWORD: ${{ secrets.PRIORITY_PASSWORD }}
+          SERVICE_CALL_URL: ${{ secrets.SERVICE_CALL_URL }}
+          SERVICE_CALL_API_KEY: ${{ secrets.SERVICE_CALL_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+        run: python deploy.py
+
+      # ── Frontend: build + publish to S3 + invalidate CloudFront ──
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish frontend
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
+          DIST=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)
+          echo "Publishing to $BUCKET (dist $DIST)"
+          aws s3 sync frontend/dist "s3://$BUCKET" --delete
+          aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*"
+
+      - name: Summary
+        run: |
+          SITE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='SiteUrl'].OutputValue" --output text)
+          echo "### Deployed :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "Site: $SITE" >> "$GITHUB_STEP_SUMMARY"

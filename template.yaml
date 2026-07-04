@@ -1,0 +1,287 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: takt-bots — WhatsApp/Telegram maintenance bot platform (serverless)
+
+Parameters:
+  Stage:
+    Type: String
+    Default: prod
+  PriorityUrlDemo:
+    Type: String
+    NoEcho: true
+    Default: ""
+  PriorityUrlReal:
+    Type: String
+    NoEcho: true
+    Default: ""
+  PriorityUsername:
+    Type: String
+    NoEcho: true
+    Default: ""
+  PriorityPassword:
+    Type: String
+    NoEcho: true
+    Default: ""
+  ServiceCallUrl:
+    Type: String
+    Default: "https://service-call.newavera.co.il"
+  ServiceCallApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+  ServiceCallBranch:
+    Type: String
+    Default: "026"
+  ServiceCallDryRun:
+    Type: String
+    Default: "true"           # safe default: don't open real calls until verified
+  TelegramBotToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+  OpenAiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+  ClaudeModel:
+    Type: String
+    Default: "claude-sonnet-4-6"
+  WhatsAppPhoneNumberId:
+    Type: String
+    NoEcho: true
+    Default: ""
+  WhatsAppAccessToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+  WhatsAppVerifyToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+    Runtime: python3.13
+
+Resources:
+
+  # ── API Gateway (HTTP API) ──────────────────────────
+  ApiGateway:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowOrigins: ["*"]
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: [Content-Type, X-Api-Key]
+
+  # ── FastAPI Lambda (Mangum) ─────────────────────────
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub takt-bots-api-${Stage}
+      CodeUri: ./build/lambda/
+      Handler: lambda_handler.handler
+      Environment:
+        Variables:
+          STORAGE_BACKEND: dynamodb
+          IS_LAMBDA: "true"
+          BOT_SCRIPTS_TABLE: !Ref BotScriptsTable
+          BOT_PROMPTS_TABLE: !Ref BotPromptsTable
+          TROUBLESHOOT_SESSIONS_TABLE: !Ref TroubleshootSessionsTable
+          MESSAGES_TABLE: !Ref MessagesTable
+          SERVICE_CALLS_TABLE: !Ref ServiceCallsTable
+          # Identify + open calls against the live Service-Call app
+          EQUIPMENT_READER_ENABLED: "true"
+          SERVICE_CALL_WRITER_ENABLED: "true"
+          BOT_EQUIPMENT_READER_MODULE: agents.bot_engine.servicecall_provider
+          BOT_SERVICE_CALL_WRITER_MODULE: agents.bot_engine.servicecall_provider
+          SERVICE_CALL_URL: !Ref ServiceCallUrl
+          SERVICE_CALL_API_KEY: !Ref ServiceCallApiKey
+          SERVICE_CALL_BRANCH: !Ref ServiceCallBranch
+          SERVICE_CALL_DRY_RUN: !Ref ServiceCallDryRun
+          # Priority (fallback / optional)
+          PRIORITY_URL_DEMO: !Ref PriorityUrlDemo
+          PRIORITY_URL_REAL: !Ref PriorityUrlReal
+          PRIORITY_USERNAME: !Ref PriorityUsername
+          PRIORITY_PASSWORD: !Ref PriorityPassword
+          # AI
+          OPENAI_API_KEY: !Ref OpenAiApiKey
+          OPENAI_MODEL: gpt-4o-mini
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          CLAUDE_MODEL: !Ref ClaudeModel
+          # Channels
+          TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+          WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
+          WHATSAPP_ACCESS_TOKEN: !Ref WhatsAppAccessToken
+          WHATSAPP_VERIFY_TOKEN: !Ref WhatsAppVerifyToken
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref BotScriptsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref BotPromptsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref TroubleshootSessionsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref MessagesTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref ServiceCallsTable }
+      Events:
+        ApiCatchAll:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api/{proxy+}
+            Method: ANY
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ApiGateway
+            Path: /api
+            Method: ANY
+
+  # ── DynamoDB tables ─────────────────────────────────
+  BotScriptsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub takt-bots-scripts-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: script_id, AttributeType: S }]
+      KeySchema: [{ AttributeName: script_id, KeyType: HASH }]
+
+  BotPromptsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub takt-bots-prompts-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: prompt_id, AttributeType: S }]
+      KeySchema: [{ AttributeName: prompt_id, KeyType: HASH }]
+
+  TroubleshootSessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub takt-bots-sessions-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: phone, AttributeType: S }]
+      KeySchema: [{ AttributeName: phone, KeyType: HASH }]
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
+
+  MessagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub takt-bots-messages-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: id, AttributeType: S }
+        - { AttributeName: status, AttributeType: S }
+        - { AttributeName: created_at, AttributeType: S }
+      KeySchema: [{ AttributeName: id, KeyType: HASH }]
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - { AttributeName: status, KeyType: HASH }
+            - { AttributeName: created_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+
+  ServiceCallsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub takt-bots-service-calls-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: id, AttributeType: S }
+        - { AttributeName: status, AttributeType: S }
+        - { AttributeName: created_at, AttributeType: S }
+        - { AttributeName: phone, AttributeType: S }
+      KeySchema: [{ AttributeName: id, KeyType: HASH }]
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - { AttributeName: status, KeyType: HASH }
+            - { AttributeName: created_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: phone-created_at-index
+          KeySchema:
+            - { AttributeName: phone, KeyType: HASH }
+            - { AttributeName: created_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+
+  # ── Frontend hosting (S3 private + CloudFront) ──────
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub takt-bots-frontend-${Stage}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub takt-bots-oac-${Stage}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig: { OriginAccessIdentity: "" }
+          - Id: ApiOrigin
+            DomainName: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+            OriginPath: !Sub /${Stage}
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # CachingOptimized
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad   # CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # AllViewerExceptHostHeader
+        CustomErrorResponses:
+          - { ErrorCode: 403, ResponseCode: 200, ResponsePagePath: /index.html }
+          - { ErrorCode: 404, ResponseCode: 200, ResponsePagePath: /index.html }
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: s3:GetObject
+            Resource: !Sub ${FrontendBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway base URL
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  SiteUrl:
+    Description: CloudFront URL (open this)
+    Value: !Sub https://${CloudFrontDistribution.DomainName}
+  FrontendBucketName:
+    Value: !Ref FrontendBucket
+  CloudFrontDistributionId:
+    Value: !Ref CloudFrontDistribution

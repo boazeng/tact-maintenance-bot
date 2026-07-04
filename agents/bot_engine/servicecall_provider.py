@@ -25,7 +25,9 @@ import requests
 logger = logging.getLogger("taktbots.servicecall")
 
 _created = []       # calls opened this process
-_dry_write = True   # default: DON'T actually open a call (safe for testing)
+# Default from env (safe default = dry). Production sets SERVICE_CALL_DRY_RUN=false
+# to open real calls; the tester overrides per-run via set_write_mode().
+_dry_write = os.getenv("SERVICE_CALL_DRY_RUN", "true").lower() not in ("0", "false", "no")
 _dry_seq = 0
 
 
