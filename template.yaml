@@ -34,8 +34,12 @@ Parameters:
     Default: "026"
   ServiceCallDryRun:
     Type: String
-    Default: "true"           # safe default: don't open real calls until verified
+    Default: "false"          # LIVE: the cloud bot opens real Service-Call calls
   TelegramBotToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+  TelegramWebhookSecret:
     Type: String
     NoEcho: true
     Default: ""
@@ -130,6 +134,8 @@ Resources:
           CLAUDE_MODEL: !Ref ClaudeModel
           # Channels
           TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+          TELEGRAM_WEBHOOK_SECRET: !Ref TelegramWebhookSecret
+          TELEGRAM_SCRIPT_ID: flow_1772177781916
           WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
           WHATSAPP_ACCESS_TOKEN: !Ref WhatsAppAccessToken
           WHATSAPP_VERIFY_TOKEN: !Ref WhatsAppVerifyToken

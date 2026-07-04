@@ -18,9 +18,12 @@ import sys
 import os
 import io
 
-# Fix Windows console encoding for Hebrew
-if not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.encoding != "utf-8":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+# Fix Windows console encoding for Hebrew (skip on Lambda, whose stdout has no .buffer)
+try:
+    if not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.encoding != "utf-8":
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
 
 import requests
 

@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import settings  # noqa: F401  (sets sys.path + loads shared env)
-from backend.app.api import scripts, sessions, whatsapp, bot_test
+from backend.app.api import scripts, sessions, whatsapp, bot_test, telegram
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("taktbots")
@@ -31,6 +31,7 @@ app.include_router(scripts.router)
 app.include_router(sessions.router)
 app.include_router(whatsapp.router)
 app.include_router(bot_test.router)
+app.include_router(telegram.router)
 
 
 @app.get("/api/health")

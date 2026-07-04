@@ -14,11 +14,14 @@ import os
 # Pin Telegram to the main maintenance bot (it switch_scripts into the sub-bot).
 os.environ.setdefault("TELEGRAM_SCRIPT_ID", "flow_1772177781916")
 # Identify (customer/device/open-call) against the live Service-Call app.
-# Writes default to dry-run inside servicecall_provider — no real call is opened.
 os.environ.setdefault("EQUIPMENT_READER_ENABLED", "true")
 os.environ.setdefault("SERVICE_CALL_WRITER_ENABLED", "true")
 os.environ.setdefault("BOT_EQUIPMENT_READER_MODULE", "agents.bot_engine.servicecall_provider")
 os.environ.setdefault("BOT_SERVICE_CALL_WRITER_MODULE", "agents.bot_engine.servicecall_provider")
+# Open REAL calls in the live Service-Call app (not dry-run). This is the actual
+# maintenance bot on Telegram, so a completed conversation must create a real call.
+# Override on the command line with SERVICE_CALL_DRY_RUN=true to test without writing.
+os.environ.setdefault("SERVICE_CALL_DRY_RUN", "false")
 
 import run_telegram_guy  # reuse the tested polling loop + routing
 

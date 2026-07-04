@@ -32,6 +32,7 @@ PARAM_MAP = {
     "ServiceCallUrl": "SERVICE_CALL_URL",
     "ServiceCallApiKey": "SERVICE_CALL_API_KEY",
     "TelegramBotToken": "TELEGRAM_BOT_TOKEN",
+    "TelegramWebhookSecret": "TELEGRAM_WEBHOOK_SECRET",
     "OpenAiApiKey": "OPENAI_API_KEY",
     "AnthropicApiKey": "ANTHROPIC_API_KEY",
     "WhatsAppPhoneNumberId": "WHATSAPP_PHONE_NUMBER_ID",
