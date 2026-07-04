@@ -62,6 +62,18 @@ Parameters:
     Type: String
     NoEcho: true
     Default: ""
+  CustomDomain:
+    Type: String
+    Default: "tact-maintenance-bot.newavera.co.il"
+  CertificateArn:
+    # ACM cert (us-east-1) for CustomDomain. Must be ISSUED before deploy.
+    Type: String
+    Default: "arn:aws:acm:us-east-1:824980746386:certificate/9ba8890c-2588-4e7c-9da1-3ff97c719b6c"
+
+Conditions:
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref CustomDomain, ""]]
+    - !Not [!Equals [!Ref CertificateArn, ""]]
 
 Globals:
   Function:
@@ -233,6 +245,13 @@ Resources:
       DistributionConfig:
         Enabled: true
         DefaultRootObject: index.html
+        Aliases: !If [HasCustomDomain, [!Ref CustomDomain], !Ref "AWS::NoValue"]
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         Origins:
           - Id: S3Origin
             DomainName: !GetAtt FrontendBucket.RegionalDomainName
@@ -281,6 +300,10 @@ Outputs:
   SiteUrl:
     Description: CloudFront URL (open this)
     Value: !Sub https://${CloudFrontDistribution.DomainName}
+  CustomDomainUrl:
+    Description: Custom subdomain (after DNS points here)
+    Condition: HasCustomDomain
+    Value: !Sub https://${CustomDomain}
   FrontendBucketName:
     Value: !Ref FrontendBucket
   CloudFrontDistributionId:
