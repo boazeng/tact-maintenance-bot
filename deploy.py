@@ -41,11 +41,19 @@ PARAM_MAP = {
 }
 
 
+# Non-secret params we ALWAYS pass explicitly. SAM keeps the previous stack value
+# for any param not in --parameter-overrides, so a changed template default alone
+# is ignored — these must be sent every deploy.
+FIXED_PARAMS = {
+    "ServiceCallDryRun": os.environ.get("SERVICE_CALL_DRY_RUN", "false"),
+}
+
+
 def main():
     print(">> 1/2 - assembling Lambda package")
     build_lambda.main()
 
-    overrides = []
+    overrides = [f"{k}={v}" for k, v in FIXED_PARAMS.items()]
     for param, env in PARAM_MAP.items():
         val = os.environ.get(env, "")
         if val:
