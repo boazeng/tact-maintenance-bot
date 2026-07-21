@@ -71,13 +71,15 @@ def build_notification(done_config, session, call_id):
 
     ctx = build_context(session, call_id)
     payload = {"phones": phones}
+
+    # Always carry the free text: it is what a plain send uses, and the
+    # fallback when the template is missing or not approved yet.
+    payload["text"] = str(done_config.get("notify_text") or DEFAULT_NOTIFY_TEXT).format_map(ctx)
+
     template = done_config.get("notify_template", "")
     if template:
         payload["template"] = template
         payload["language"] = done_config.get("notify_language", "he")
         payload["params"] = [tpl_param(str(p).format_map(ctx))
                              for p in done_config.get("notify_params", [])]
-    else:
-        tmpl = str(done_config.get("notify_text") or DEFAULT_NOTIFY_TEXT)
-        payload["text"] = tmpl.format_map(ctx)
     return payload

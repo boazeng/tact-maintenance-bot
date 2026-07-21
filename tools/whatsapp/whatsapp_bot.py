@@ -119,17 +119,27 @@ def send_staff_notification(notify):
     if not notify:
         return []
     phones = notify.get("phones") or ([notify["phone"]] if notify.get("phone") else [])
+    template, text = notify.get("template"), notify.get("text")
     failed = []
     for phone in phones:
-        try:
-            if notify.get("template"):
-                send_template(phone, notify["template"],
+        sent = False
+        if template:
+            try:
+                send_template(phone, template,
                               language=notify.get("language", "he"),
                               parameters=notify.get("params"))
-            elif notify.get("text"):
-                send_message(phone, notify["text"])
-        except Exception as e:
-            print(f"Staff notification to {phone} failed: {e}")
+                sent = True
+            except Exception as e:
+                # Template missing / not approved yet — fall back to plain text,
+                # which still reaches anyone inside the 24-hour window.
+                print(f"Template '{template}' to {phone} failed ({e}); trying plain text")
+        if not sent and text:
+            try:
+                send_message(phone, text)
+                sent = True
+            except Exception as e:
+                print(f"Staff notification to {phone} failed: {e}")
+        if not sent:
             failed.append(phone)
     return failed
 
