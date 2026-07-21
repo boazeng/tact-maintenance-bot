@@ -14,6 +14,7 @@ from .state import (
 )
 from .scripts import _load_script, _is_done_step
 from .steps import _resolve_skip_chain, _build_step_message
+from .notify import build_notification
 
 
 def _switch_to_script(phone, target_script_id, session, db):
@@ -63,7 +64,7 @@ def _handle_done(done_id, script, session):
     action = done_config.get("action", "")
     call_id = ""
     if action == "save_message":
-        _save_customer_message(session, script)
+        call_id = _save_customer_message(session, script) or ""
     elif action == "save_service_call":
         call_id = _save_completed_service_call(session, script) or ""
     elif action == "escalate":
@@ -78,7 +79,7 @@ def _handle_done(done_id, script, session):
     elif action:
         # Unknown/custom action — log it, save as generic message
         logger.info(f"[M10010] Custom action '{action}' for done={done_id}, saving as message")
-        _save_customer_message(session, script)
+        call_id = _save_customer_message(session, script) or ""
 
     # Log done event + extend TTL to 7 days so diagnostics can review completed sessions
     _append_log(session, "session_done", done_id=done_id, action=action)
@@ -92,31 +93,16 @@ def _handle_done(done_id, script, session):
 
     result = {"text": done_config.get("text", "תודה!")}
 
-    # Send admin WhatsApp notification if configured on this done action
-    notify_phone = done_config.get("notify_phone", "")
-    if notify_phone and call_id:
-        import collections as _col
-        notify_tmpl = done_config.get("notify_text",
-            "נפתחה קריאת שירות חדשה מהבוט הקולי 📞\nמספר קריאה: {call_id}\nטלפון: {phone}")
-        try:
-            # Flatten parsed_data fields so Hebrew keys from voice-bot are available in template
-            flat_ctx = {}
-            raw_pd = session.get("parsed_data", {})
-            if isinstance(raw_pd, str):
-                try:
-                    raw_pd = json.loads(raw_pd)
-                except Exception:
-                    raw_pd = {}
-            if isinstance(raw_pd, dict):
-                flat_ctx.update(raw_pd)
-            flat_ctx.update(session)
-            notify_msg = notify_tmpl.format_map(
-                _col.defaultdict(str, call_id=call_id, **flat_ctx)
-            )
-            result["notify_whatsapp"] = {"phone": notify_phone, "text": notify_msg}
-            logger.info(f"[M10010] Admin notification queued → {notify_phone}")
-        except Exception as e:
-            logger.error(f"[M10010] Failed to build admin notification: {e}")
+    # Alert staff on WhatsApp if this done action configures it (one or more
+    # numbers; free text, or an approved template for the 24-hour window).
+    try:
+        notification = build_notification(done_config, session, call_id)
+        if notification:
+            result["notify_whatsapp"] = notification
+            logger.info(f"[M10010] Staff notification queued -> "
+                        f"{', '.join(notification['phones'])}")
+    except Exception as e:
+        logger.error(f"[M10010] Failed to build staff notification: {e}")
 
     return result
 

@@ -124,3 +124,12 @@ def _send_response(chat_id, result):
             )
         else:
             telegram_bot.send_message(chat_id, text)
+
+    # Staff alerts always go out on WhatsApp, even for a Telegram conversation.
+    notify = result.get("notify_whatsapp")
+    if notify:
+        from tools.whatsapp import whatsapp_bot
+        failed = whatsapp_bot.send_staff_notification(notify)
+        sent = [p for p in notify.get("phones", []) if p not in failed]
+        logger.info(f"Staff notification sent to {sent or 'nobody'}"
+                    + (f" (failed: {failed})" if failed else ""))

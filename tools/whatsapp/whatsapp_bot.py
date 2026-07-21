@@ -109,6 +109,31 @@ def send_template(phone, template_name, language="he", parameters=None):
     return result
 
 
+def send_staff_notification(notify):
+    """Send an engine `notify_whatsapp` payload to every configured number.
+
+    Uses the approved template when one is configured (the only thing that
+    reaches staff outside WhatsApp's 24-hour window), else plain text. One bad
+    number never blocks the rest; the failed numbers are returned.
+    """
+    if not notify:
+        return []
+    phones = notify.get("phones") or ([notify["phone"]] if notify.get("phone") else [])
+    failed = []
+    for phone in phones:
+        try:
+            if notify.get("template"):
+                send_template(phone, notify["template"],
+                              language=notify.get("language", "he"),
+                              parameters=notify.get("params"))
+            elif notify.get("text"):
+                send_message(phone, notify["text"])
+        except Exception as e:
+            print(f"Staff notification to {phone} failed: {e}")
+            failed.append(phone)
+    return failed
+
+
 def send_buttons(phone, body_text, buttons, header=None, footer=None):
     """Send an interactive button message (max 3 buttons, 20 chars per title)."""
     interactive = {

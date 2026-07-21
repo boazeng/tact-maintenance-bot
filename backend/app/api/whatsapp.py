@@ -124,12 +124,11 @@ def _send_bot_response(phone, result):
             whatsapp_bot.send_message(phone, text)
 
     notify = result.get("notify_whatsapp")
-    if notify and notify.get("phone") and notify.get("text"):
-        try:
-            whatsapp_bot.send_message(notify["phone"], notify["text"])
-            logger.info(f"Admin notification sent to {notify['phone']}")
-        except Exception as e:
-            logger.error(f"Admin notification failed: {e}")
+    if notify:
+        failed = whatsapp_bot.send_staff_notification(notify)
+        sent = [p for p in notify.get("phones", []) if p not in failed]
+        logger.info(f"Staff notification sent to {sent or 'nobody'}"
+                    + (f" (failed: {failed})" if failed else ""))
 
 
 @router.post("/api/whatsapp/send")

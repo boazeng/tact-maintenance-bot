@@ -152,6 +152,8 @@ def _apply_device(session_data, device):
     """Fill customer + site into the session from a matched device."""
     session_data["customer_number"] = device.get("custname", "")
     session_data["customer_name"] = device.get("cdes", "")
+    # Kept for staff notifications ("device: 000003 - underground car park").
+    session_data["device_description"] = device.get("partdes", "") or device.get("partname", "")
     site = device.get("site_description", "") or device.get("facilitydes", "")
     if site:
         session_data["site"] = site
